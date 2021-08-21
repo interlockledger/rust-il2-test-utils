@@ -154,12 +154,18 @@ impl TestDirUtils {
     /// will have as its contents, the UTF-8 bytes that represents
     /// the name of the file.
     ///
+    /// This method does nothing if the test file does not exist.
+    ///
     /// Arguments:
     /// - `name`: The name of the file to be removed;
     pub fn delete_test_file(&self, name: &str) -> Result<()> {
         let full_path = self.get_test_file_path(name);
         let p = Path::new(&full_path);
-        remove_file(p)
+        if p.exists() {
+            remove_file(p)
+        } else {
+            Ok(())
+        }
     }
 
     fn get_global_lock() -> MutexGuard<'static, usize> {
