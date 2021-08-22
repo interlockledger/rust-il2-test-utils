@@ -29,24 +29,46 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! # InterlockLedger test-utils
-//!
-//! ## Description
-//!
-//! **il2-test-utils** is a *Rust* library designed to provide unit-test utilities
-//! that can be used by other components of **InterlockLedger** written in *Rust*.
-//!
-//!## How to use it
-//!
-//!To use this library, just add it to your `Cargo.toml`:
-//!
-//!```toml
-//![dev-dependencies]
-//!il2-test-utils={ git = "https://github.com/interlockledger/rust-il2-test-utils.git" }
-//!```
-//!
-//! ## License
-//!
-//! This library is licensed under a 3-Clause BSD license.
-pub mod samples;
-pub mod testdir;
+use super::*;
+
+#[test]
+fn test_fill_with_value() {
+    let mut v: [u32; 6] = [0; 6];
+    fill_with_value(&mut v, 255);
+    let exp: [u32; 6] = [255; 6];
+    assert_eq!(&v, &exp);
+}
+
+#[test]
+fn test_fill_with_seq() {
+    let mut v: [u32; 6] = [0; 6];
+    fill_with_seq(&mut v, 0, 3);
+    let exp: [u32; 6] = [0, 3, 6, 9, 12, 15];
+    assert_eq!(&v, &exp);
+}
+
+#[test]
+fn test_fill_with_seq_gen() {
+    let mut v: [u32; 6] = [0; 6];
+    // Using a generator based on the Collatz conjecture.
+    fill_with_seq_gen(&mut v, 5, |v| if v % 2 == 0 { v / 2 } else { 3 * v + 1 });
+    let exp: [u32; 6] = [5, 16, 8, 4, 2, 1];
+    assert_eq!(&v, &exp);
+}
+
+#[test]
+fn test_fill_with_generator() {
+    struct Gen(u32, u32);
+    let mut v: [u32; 6] = [0; 6];
+    let mut g: Gen = Gen { 0: 0, 1: 1 };
+
+    // A Fibonacci Generator
+    fill_with_generator(&mut v, &mut g, |g| {
+        let r = g.0;
+        g.0 = g.1;
+        g.1 += r;
+        r
+    });
+    let exp: [u32; 6] = [0, 1, 1, 2, 3, 5];
+    assert_eq!(&v, &exp);
+}
