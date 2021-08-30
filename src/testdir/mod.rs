@@ -35,10 +35,9 @@
 mod tests;
 
 use std::ffi::OsString;
-use std::fs::{read_dir, remove_dir_all, remove_file, write, DirBuilder};
+use std::fs::{create_dir_all, read, read_dir, remove_dir_all, remove_file, write};
 use std::io::Result;
 use std::path::Path;
-use std::sync::{Mutex, MutexGuard, Once};
 
 //=============================================================================
 // TestDirUtils
@@ -51,14 +50,12 @@ use std::sync::{Mutex, MutexGuard, Once};
 /// of your version control system in order to prevent the addition of the
 /// test files into the version control by accident.
 ///
-/// Since *Rust* runs unit-tests using multiple threads, instances of this
-/// struct will try to hold a global lock that will serialize the execution of
-/// all tests that uses this struct. In other words, only one instance of this
-/// struct should be created inside a given unit-test function or it will
-/// end-up in a dead-lock.
+/// Since *Rust* runs unit-tests using multiple threads, this instance will
+/// create a unique subdirectory for each instance. By default, this
+/// subdirectory is deleted when the instance goes out of scope.
 pub struct TestDirUtils {
     test_dir: OsString,
-    _lock: MutexGuard<'static, usize>,
+    delete_on_terminate: bool,
 }
 
 impl TestDirUtils {
@@ -72,8 +69,8 @@ impl TestDirUtils {
     ///
     /// Returns the new instance of an error if the test directory is invalid
     /// or cannot be created.
-    pub fn new() -> Result<Self> {
-        Self::with_path(Path::new(Self::DEFAULT_TEST_DIR))
+    pub fn new(name: &str) -> Result<Self> {
+        Self::with_root(Path::new(Self::DEFAULT_TEST_DIR), name)
     }
 
     /// Creates a new `TestDirUtils`. It will automatically create
@@ -89,29 +86,45 @@ impl TestDirUtils {
     ///
     /// Returns the new instance of an error if the test directory is invalid
     /// or cannot be created.
-    pub fn with_path(test_dir: &Path) -> Result<Self> {
-        if test_dir.parent().is_none() {
-            panic!("TestDirUtils said: It is not safe to run 'rm -Rf /', don't you agree?");
+    pub fn with_root(test_root: &Path, name: &str) -> Result<Self> {
+        let unique_test_dir = Self::create_unique_name_for_thread(name);
+        let full_path = test_root.join(Path::new(&unique_test_dir));
+        if full_path.is_file() {
+            remove_file(full_path.as_path())?;
         }
-        let lock = Self::get_global_lock();
-        if !test_dir.is_dir() {
-            if test_dir.exists() {
-                remove_file(test_dir)?;
-            }
-            DirBuilder::new().recursive(true).create(test_dir)?;
+        if !full_path.exists() {
+            create_dir_all(full_path.as_path())?;
         }
         Ok(Self {
-            test_dir: OsString::from(test_dir),
-            _lock: lock,
+            test_dir: full_path.into_os_string(),
+            delete_on_terminate: true,
         })
     }
 
-    /// Returns the path to the test directory.
+    /// Returns the current value of delete_on_terminate. If true, the
+    /// test director will be destroyed when this struct is dropped. If it is
+    /// set to false, the directory will not be deleted.
+    ///
+    /// This flag is true by default.
+    pub fn delete_on_terminate(&self) -> bool {
+        self.delete_on_terminate
+    }
+
+    /// Changes the flag delete_on_terminate.
+    pub fn set_delete_on_terminate(&mut self, delete_on_terminate: bool) {
+        self.delete_on_terminate = delete_on_terminate;
+    }
+
+    fn create_unique_name_for_thread(name: &str) -> String {
+        format!("{}-{:?}", name, std::thread::current().id())
+    }
+
+    /// Returns the path of the test directory.
     pub fn test_dir(&self) -> &Path {
         Path::new(&self.test_dir)
     }
 
-    /// Deletes all of the contents of the test directory.
+    /// Deletes all of the contents of the test directory without removing it.
     pub fn reset(&self) -> Result<()> {
         for entry in read_dir(self.test_dir())? {
             match entry {
@@ -135,24 +148,34 @@ impl TestDirUtils {
         path.join(name).into_os_string()
     }
 
-    /// Create a test file inside the specified path. This file
-    /// will have as its contents, the UTF-8 bytes that represents
-    /// the name of the file.
+    /// Creates a test file with the specfied name and write something into it.
+    ///
+    /// Arguments:
+    /// - `name`: The name of the file to be created;
+    /// - `contents`: The contents of the file;
+    ///
+    /// Returns the path to the newly created file.
+    pub fn create_test_file(&self, name: &str, contents: &[u8]) -> Result<OsString> {
+        let full_path = self.get_test_file_path(name);
+        let p = Path::new(&full_path);
+        write(p, contents)?;
+        Ok(full_path)
+    }
+
+    /// Reads all the contents of the specified test file. It uses [`std::fs::read()`]
+    /// so it is subjected to the same restrictions.
     ///
     /// Arguments:
     /// - `name`: The name of the file to be created;
     ///
-    /// Returns the path to the newly created file.
-    pub fn create_test_file(&self, name: &str) -> Result<OsString> {
+    /// Returns the contents of the file.
+    pub fn read_test_file(&self, name: &str) -> Result<Vec<u8>> {
         let full_path = self.get_test_file_path(name);
         let p = Path::new(&full_path);
-        write(p, full_path.to_str().unwrap().as_bytes())?;
-        Ok(full_path)
+        Ok(read(p)?)
     }
 
-    /// Create a test file inside the specified path. This file
-    /// will have as its contents, the UTF-8 bytes that represents
-    /// the name of the file.
+    /// Deletes the specified file.
     ///
     /// This method does nothing if the test file does not exist.
     ///
@@ -167,15 +190,12 @@ impl TestDirUtils {
             Ok(())
         }
     }
+}
 
-    fn get_global_lock() -> MutexGuard<'static, usize> {
-        static mut MUTEX: Option<Mutex<usize>> = None;
-        static ONCE: Once = Once::new();
-        unsafe {
-            ONCE.call_once(|| {
-                MUTEX.replace(Mutex::default());
-            });
-            MUTEX.as_ref().unwrap().lock().unwrap()
+impl Drop for TestDirUtils {
+    fn drop(&mut self) {
+        if self.delete_on_terminate {
+            remove_dir_all(Path::new(self.test_dir())).unwrap();
         }
     }
 }

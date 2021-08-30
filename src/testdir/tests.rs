@@ -30,79 +30,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use std::fs::{remove_dir, remove_dir_all, remove_file, write};
 
 //=============================================================================
 // TestDirUtils
 //-----------------------------------------------------------------------------
-/// Returns a global lock to serialize the tests of this unit.
-fn get_local_test_lock() -> MutexGuard<'static, usize> {
-    static mut MUTEX: Option<Mutex<usize>> = None;
-    static ONCE: Once = Once::new();
-    unsafe {
-        ONCE.call_once(|| {
-            MUTEX.replace(Mutex::default());
-        });
-        MUTEX.as_ref().unwrap().lock().unwrap()
-    }
-}
-
 #[test]
 fn test_testdirutils_new() {
-    let _test_lock = get_local_test_lock();
-    // Cleanup
-    let test_dir_path = Path::new(TestDirUtils::DEFAULT_TEST_DIR);
-    if test_dir_path.exists() {
-        if test_dir_path.is_dir() {
-            remove_dir_all(test_dir_path).unwrap();
-        } else {
-            remove_file(test_dir_path).unwrap();
-        }
-    }
-
     // Create normal
-    let test_dir = TestDirUtils::new();
-    assert!(test_dir_path.is_dir());
+    let mut test_dir = TestDirUtils::new("test_testdirutils_new").unwrap();
+    test_dir.set_delete_on_terminate(false);
+    let curr_path = OsString::from(test_dir.test_dir());
     drop(test_dir);
-
-    // Create with a file in the way
-    remove_dir(test_dir_path).unwrap();
-    write(test_dir_path, b"").unwrap();
-    let test_dir = TestDirUtils::new();
-    assert!(test_dir_path.is_dir());
-    drop(test_dir);
-}
-
-#[cfg(not(target_os = "windows"))]
-#[test]
-#[should_panic(expected = "TestDirUtils said: It is not safe to run 'rm -Rf /', don't you agree?")]
-fn test_testdirutils_with_path_safeguard() {
-    let test_dir = TestDirUtils::with_path(Path::new("/"));
-    drop(test_dir);
-}
-
-#[test]
-fn test_testdirutils_with_path() {
-    let _test_lock = get_local_test_lock();
-    // Cleanup
-    let test_dir_path = Path::new(TestDirUtils::DEFAULT_TEST_DIR);
-    if test_dir_path.exists() {
-        if test_dir_path.is_dir() {
-            remove_dir_all(test_dir_path).unwrap();
-        } else {
-            remove_file(test_dir_path).unwrap();
-        }
-    }
-
+    assert!(Path::new(&curr_path).exists());
     // Create normal
-    let test_dir = TestDirUtils::new();
-    assert!(test_dir_path.is_dir());
+    let test_dir = TestDirUtils::new("test_testdirutils_new").unwrap();
+    let contents = b"this is just a test!";
+    test_dir.create_test_file("test", contents).unwrap();
+    let actual = test_dir.read_test_file("test").unwrap();
+    assert_eq!(actual.as_slice(), contents);
+    test_dir.delete_test_file("test").unwrap();
+    test_dir.delete_test_file("test").unwrap();
+    let test_file = test_dir.get_test_file_path("test");
+    assert!(!Path::new(&test_file).exists());
     drop(test_dir);
-
-    // Create with a file in the way
-    remove_dir(test_dir_path).unwrap();
-    write(test_dir_path, b"").unwrap();
-    let test_dir = TestDirUtils::new();
-    assert!(test_dir_path.is_dir());
-    drop(test_dir);
+    assert!(!Path::new(&curr_path).exists());
 }
