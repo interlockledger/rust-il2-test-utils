@@ -162,6 +162,18 @@ impl TestDirUtils {
         Ok(full_path)
     }
 
+    /// Creates an empty test file with the specfied name. The file will have no contents as
+    /// it is equivalent to call [`TestDirUtils::create_test_file()`] with `b""` as its
+    /// contents.
+    ///
+    /// Arguments:
+    /// - `name`: The name of the file to be created;
+    ///
+    /// Returns the path to the newly created file.
+    pub fn touch_test_file(&self, name: &str) -> Result<OsString> {
+        self.create_test_file(name, b"")
+    }
+
     /// Reads all the contents of the specified test file. It uses [`std::fs::read()`]
     /// so it is subjected to the same restrictions.
     ///

@@ -36,14 +36,7 @@
 //! **il2-test-utils** is a *Rust* library designed to provide unit-test utilities
 //! that can be used by other components of **InterlockLedger** written in *Rust*.
 //!
-//!## How to use it
-//!
-//!To use this library, just add it to your `Cargo.toml`:
-//!
-//!```toml
-//![dev-dependencies]
-//!il2-test-utils={ git = "https://github.com/interlockledger/rust-il2-test-utils.git" }
-//!```
+//! See [crate.io](https://crates.io/) for further information about this library.
 //!
 //! ## License
 //!
