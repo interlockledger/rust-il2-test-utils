@@ -2,7 +2,13 @@
 name = "il2-test-utils"
 version = "0.1.0"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "InterlockLedger's Unit-Test utilities for Rust."
+authors = ["InterlockLedger Network", "Fabio Jun Takada Chino", "Cesar Luiz Ferracin"]
+homepage = "https://github.com/interlockledger/rust-il2-test-utils"
+license = "BSD-3-Clause"
+keywords = ["interlockledger", "Testing"]
+categories = ["Development tools::Testing"]
+repository = "https://github.com/interlockledger/rust-il2-test-utils"
+readme = "README.md"
 
 [dependencies]
