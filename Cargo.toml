@@ -7,7 +7,7 @@ authors = ["InterlockLedger Network", "Fabio Jun Takada Chino", "Cesar Luiz Ferr
 homepage = "https://github.com/interlockledger/rust-il2-test-utils"
 license = "BSD-3-Clause"
 keywords = ["interlockledger", "Testing"]
-categories = ["Development tools::Testing"]
+categories = ["development-tools::testing"]
 repository = "https://github.com/interlockledger/rust-il2-test-utils"
 readme = "README.md"
 
