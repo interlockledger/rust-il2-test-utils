@@ -36,7 +36,7 @@
 //! **il2-test-utils** is a *Rust* library designed to provide unit-test utilities
 //! that can be used by other components of **InterlockLedger** written in *Rust*.
 //!
-//! See [crate.io](https://crates.io/) for further information about this library.
+//! See [crate.io](https://crates.io/crates/il2-test-utils) for further information about this library.
 //!
 //! ## License
 //!

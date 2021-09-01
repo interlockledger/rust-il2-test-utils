@@ -11,8 +11,8 @@ not use it in production code!
 
 ## How to use it
 
-To use this library, just add it to your `Cargo.toml`. Visit [crate.io](https://crates.io/)
-to get the latest "stable" releases.
+To use this library, just add it to your `Cargo.toml`. Visit
+[crate.io](https://crates.io/crates/il2-test-utils) to get the latest "stable" releases.
 
 If you want to use the latest version, just add the following lines into your `Cargo.toml`.
 
@@ -28,8 +28,8 @@ in its public interface may break unit-tests using it.
 
 ## Project history
 
-- 0.1.0:
-    - Initial release;
+- 0.1.1:
+    - Initial release with metadata fixed;
 
 ## License
 
